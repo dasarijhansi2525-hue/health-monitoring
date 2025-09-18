@@ -1,0 +1,207 @@
+  
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Health Monitoring App</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f0f2f5;
+      margin: 0;
+      padding: 0;
+      body {
+  /* Linear gradient from blue at the top to green at the bottom */
+  background: linear-gradient(to bottom, blue, green);
+}
+
+    }
+
+    .container {
+      max-width: 600px;
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 15px;
+    }
+
+    button {
+      margin-top: 20px;
+      width: 100%;
+      background-color: #007bff;
+      color: white;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .result {
+      margin-top: 25px;
+      padding: 15px;
+      background-color: #e9f7ef;
+      border: 1px solid #c3e6cb;
+      border-radius: 10px;
+    }
+
+    .abnormal {
+      background-color: #f8d7da;
+      border-color: #f5c6cb;
+    }
+
+    .history {
+      margin-top: 30px;
+      padding: 15px;
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+    }
+
+    .entry {
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 6px;
+      background: #f0f8ff;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🩺 Health Monitoring App</h1>
+    
+    <label for="heartRate">Heart Rate (bpm):</label>
+    <input type="number" id="heartRate" placeholder="Enter heart rate" />
+
+    <label for="temperature">Body Temperature (°C):</label>
+    <input type="number" step="0.1" id="temperature" placeholder="Enter temperature" />
+
+    <label for="bloodPressure">Blood Pressure (mmHg):</label>
+    <input type="text" id="bloodPressure" placeholder="e.g., 120/80" />
+
+    <label for="bloodSugar">Blood Sugar (mg/dL):</label>
+    <input type="number" id="bloodSugar" placeholder="Enter blood sugar" />
+
+    <button onclick="analyzeHealth()">Analyze & Save</button>
+
+    <div id="result" class="result" style="display:none;"></div>
+
+    <div class="history">
+      <h3>📋 Health History</h3>
+      <div id="historyLog"></div>
+    </div>
+  </div>
+
+  <script>
+    function analyzeHealth() {
+      var heartRate = parseInt(document.getElementById("heartRate").value);
+      var temperature = parseFloat(document.getElementById("temperature").value);
+      var bloodPressure = document.getElementById("bloodPressure").value.trim();
+      var bloodSugar = parseInt(document.getElementById("bloodSugar").value);
+      var resultDiv = document.getElementById("result");
+
+      if (!heartRate || !temperature || !bloodPressure || !bloodSugar) {
+        alert("Please fill in all fields.");
+        return;
+      }
+
+      var [systolic, diastolic] = bloodPressure.split("/").map(Number);
+      if (!systolic || !diastolic) {
+        alert("Invalid blood pressure format. Use systolic/diastolic like 120/80");
+        return;
+      }
+
+      let message = `<h3>📊 Health Summary:</h3>`;
+      let isAbnormal = false;
+
+      var checkRange = (value, min, max) => value >= min && value <= max;
+
+      // Heart Rate
+      var heartRateOk = checkRange(heartRate, 60, 100);
+      message += `<p>❤️ Heart Rate: ${heartRate} bpm – <b>${heartRateOk ? "Normal" : "Abnormal"}</b></p>`;
+      if (!heartRateOk) isAbnormal = true;
+
+      // Temperature
+      var tempOk = checkRange(temperature, 35.1, 38.2);
+      message += `<p>🌡️ Temperature: ${temperature}°C – <b>${tempOk ? "Normal" : "Abnormal"}</b></p>`;
+      if (!tempOk) isAbnormal = true;
+
+      // Blood Pressure
+      var bpOk = systolic < 130 && diastolic < 85;
+      message += `<p>🩸 Blood Pressure: ${systolic}/${diastolic} mmHg – <b>${bpOk ? "Normal" : "High or Low"}</b></p>`;
+      if (!bpOk) isAbnormal = true;
+
+      // Blood Sugar
+      var sugarOk = checkRange(bloodSugar, 70, 140);
+      message += `<p>🍬 Blood Sugar: ${bloodSugar} mg/dL – <b>${sugarOk ? "Normal" : "Abnormal"}</b></p>`;
+      if (!sugarOk) isAbnormal = true;
+
+      // Style result
+      resultDiv.innerHTML = message;
+      resultDiv.style.display = "block";
+      resultDiv.className = "result " + (isAbnormal ? "abnormal" : "");
+
+      // Save entry
+      var log = {
+        time: new Date().toLocaleString(),
+        heartRate,
+        temperature,
+        bloodPressure,
+        bloodSugar,
+        status: isAbnormal ? "⚠️ Abnormal" : "✅ Normal"
+      };
+
+      saveToHistory(log);
+    }
+
+    function saveToHistory(entry) {
+      let history = JSON.parse(localStorage.getItem("healthHistory")) || [];
+      history.unshift(entry); // add to beginning
+      localStorage.setItem("healthHistory", JSON.stringify(history));
+      displayHistory();
+    }
+
+    function displayHistory() {
+      const historyLog = document.getElementById("historyLog");
+      const history = JSON.parse(localStorage.getItem("healthHistory")) || [];
+      historyLog.innerHTML = "";
+
+      if (history.length === 0) {
+        historyLog.innerHTML = "<p>No entries yet.</p>";
+        return;
+      }
+
+      history.slice(0, 5).forEach(entry => {
+        const div = document.createElement("div");
+        div.className = "entry";
+        div.innerHTML = `
+          <strong>${entry.time}</strong><br/>
+          ❤️ ${entry.heartRate} bpm | 🌡️ ${entry.temperature}°C<br/>
+          🩸 ${entry.bloodPressure} | 🍬 ${entry.bloodSugar} mg/dL<br/>
+          Status: <b>${entry.status}</b>
+        `;
+        historyLog.appendChild(div);
+      });
+    }
+
+    // Load on page
+    displayHistory();
+  </script>
+</body>
+</html>
